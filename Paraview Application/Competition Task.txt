@@ -1,0 +1,169 @@
+
+ParaView Visualization Task
+
+A Globular Cluster animation visualization
+
+This task is to take the provided data from an astrophysical
+simulation, load it into ParaView, develop a basic visualization
+pipeline, and then use that pipeline to generate a time-based
+sequence of images that can be converted into a movie file.
+(Note that the creation of the movie file is not a requirement
+of this task, but if you figure out a way to do that, all the
+better -- ffmpeg is a handy tool for this.)
+
+
+**************
+** The Data **
+
+You are provided 2000 data files, each with a different timestep,
+and containing a small amount of data for 100,000 stars.  Here
+is the information from the scientist who produced the data:
+
+	The data consists of a series of timestep files named t1.dat,
+	t2.dat.....tN.dat. The first line in each file contains the total
+	number of stars in the snapshot and the time (in Myr).  After that,
+	the columns are Star_ID, Mass (in solar units), x,y,z (in pc).
+
+	In some cases the total number of stars is not correct.  This has
+	to do with how to code counts binary stars.
+
+The data files have the filename format of t<n>.dat, where <n> is from
+1 to 2000, with leading zeros.  ParaView has the ability to recognize
+that there is a sequence of numbers in the file name, so when you go to
+"Open" the file, it will initially show them as a collection called:
+	t..dat
+
+If you click on the "+" to expand the view you will see the individual
+files, and you can choose one of these.  For the animation you will want
+to select all the files -- during experimentation you might just select
+one.
+
+Fortunately, ParaView can handle the fact that the numbers do not have
+leading zeros.  My prefernce is to rename the files to add those zeros,
+but that is not necessary.
+
+Unfortunately, the data is not in a format that ParaView can immediately
+recognize, so you will have to do some minor manipulation of the data
+before visualizing it.  Because it ends with the ".dat" extension, ParaView
+determines that it is a TecPlot file, but that is not what it is.
+
+There are now two options for successfully reading the data.
+
+1) Write a script/program that converts the data into a format that VTK
+recognizes.  This is a handy option in that ParaView will now read the
+data without further processing, but it does require learning a format.
+A good option here is to use a script language such as AWK or Python to
+read the data and output it into the VTK Legacy format, which is fairly
+simple to create in ASCII.  The VTK Legacy format however does not keep
+track of simulation time, so this information will be lost.  That is
+fine for this task, but using something like the ParaView ".pvd" format
+allows for simulation time to be kept with the data.
+
+An example of the first timestep data is provided as "jwdata_0001.vtk".
+
+2) Add a header to each file to indicate what each column of data contains.
+Actually in this case you can replace the header.  As per the information
+from the researcher, the number of stars make actually be incorrect, so
+we don't need that, and the time value we won't be using for the competition
+task, so we don't need that either.  What does need to be added is a
+simple single line with a name for each column of the data.  For example:
+	ID mass x y z
+
+With this header, the default reader can read the data -- with some proper
+settings in the filter properties.  Namely, the default ASCII reader defaults
+to CSV (comma-spearated values) format, but the data is space-separated, so
+that needs to be adjusted, also, it's usually a good idea to merge separators
+when using white-space as the separator, and indeed that is requried for the
+format of this data.
+
+Once the raw data is loaded, the x, y & z values need to be used to
+locate each datum at the proper location, and the "TableToPoints" filter
+is useful for that -- this is only for the raw data reader, when writing
+the data into a VTK format, the location information would be integrated
+into the format.
+
+
+***********************
+** The Visualization **
+
+There will be two primary features of this visualization.  One is to
+simply render the stars as they move through space, and the other is
+to show the stellar mass density through a subset of the region.
+
+* A good starting point is to simply see all the data.  For this you
+can just render the data from "TableToPoints" as points.  But a better
+solution is to use the "Glyph" tool and render them as spheres.  For
+The Glyph tool can show all or a subset of the data.  Ultimately we'd
+want to see all of it, but the resolution of the spheres can be reduced
+to increase performance.  NOTE: that when the final rendering is produced,
+the resolution can be increased as interactivity is no longer important.
+
+An example of this can be found in example screenshot #1 (provided).
+
+
+* The scientists are interested in seeing what's happening in the core
+of the cluster, so a useful tool for this is the clipping plane.  The
+"Clip" tool is so common that it is on the main tool layout for ParaView.
+The scientist has suggested looking at the region around the center
+with the Z-value at +/1 0.5.  An exampple of this (after being processed
+by a different "Glyph" filter can be found in example screenshot #2.
+Note that this requires two "Clip" filters.
+
+
+* The final request is to show the density of stellar mass in this
+clipped region.  The best tool to accumulate data from point values in
+a region of space is the "GaussianResampling" filter.  This should then
+be applied to the data after it has been clipped to the center region.
+The resolution of the sampling can be controlled with the "Resampling Grid"
+values.  
+
+This data then needs to be visualized.  There are a variety of ways this
+can be done, one is through volume visualization, the other is with
+isosurfaces (created with the "Contour" filter operating on 3D data).
+Example screenshot #3 shows a visualization that slices the data through
+the center, applies a logrithmic purple-green coloring to the slice, and
+also takes 2D iso-lines (created with the same "Contour" filter mentioned
+above, but with 2D data as the input).  These iso lines are generated in
+a logrithmic progression, and then highlighted with a "Tube" filter which
+converts them into 3D polygons for easier viewing.
+
+
+*******************
+** The Animation **
+
+The final stage of the project is to animate over the 2000 timesteps.
+This can be done as a batch operation by saving the state of the visualaztion
+created interactively, and then reading it in a batch script and rendered.
+
+There is an option under the "File" menu to "Save State ...".  Doing this
+will save the file as a ".pvsm" file, and this file can be reread by
+the interactive ParaView, or by batch-mode ParaView -- "pvbatch".
+
+An overview of this process can be found in the slides from a talk
+given at SuperComputing 2013:
+	- https://www.tacc.utexas.edu/documents/10165/1147324/02+Creating+Animations+with+Paraview.pdf
+
+There is an animation panel that can be used to adjust parameters of
+the visualization from frame to frame, including the view position, but
+the use of that is optional.
+
+As mentioned in the introduction, this task only requires the
+creation of a sequence of images.  Typically this would then be
+followed by the use of a tool such as FFMpeg to convert the images
+into a "movie" file.
+
+
+*****************
+** The Results **
+
+What we will be looking for as a result of the process are these
+sub-tasks:
+
+1) data-wrangling: the ability to load the dataset into ParaView
+
+2) visualization: creating a basic visualization that shows the
+internals of the globular cluster over time.
+
+3) animation: the "pvbatch" tool should be used to take the visualization
+and batch process it into a sequence of images over time.
+

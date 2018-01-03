@@ -1,0 +1,8 @@
+MPI_LINK = $(shell /usr/mpi/gcc/openmpi-3.0.0rc6/bin/mpicc --showme:link)
+MPI_COMPILE = $(shell /usr/mpi/gcc/openmpi-3.0.0rc6/bin/mpicc --showme:compile)
+
+SRCDIR       = .
+RM           = rm
+CC           = /usr/mpi/gcc/openmpi-3.0.0rc6/bin/mpicc
+CFLAGS       = -O3 -DNDEBUG -I/usr/local/include/libhmsbeagle-1 -DUSECONFIG_H $(MPI_COMPILE)
+LDFLAGS      =  $(MPI_LINK) -L/usr/local/lib -lhmsbeagle -lm
