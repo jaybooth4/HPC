@@ -1,1 +1,2 @@
-This is a set of files that pertain to HPC and Mr. Bayes, the application I took on at the International Student Cluster Competition in Denver at SC17.
+This is a set of documents pertaining to HPC. There are write ups with general knowledge regarding HPC tools, 
+as well as materials for Paraview and Mr. Bayes which are applications that I've taken on in competitions.
